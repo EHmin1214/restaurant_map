@@ -81,7 +81,7 @@ def check_ads(body: AdCheckRequest, db: Session = Depends(get_db)):
         if body.address_hint else body.restaurant_name
 
     scraper = NaverBlogScraper()
-    posts_data = scraper.get_posts_by_keyword(query, max_posts=100)
+    posts_data = scraper.get_posts_by_keyword(query, max_posts=10)
 
     checker = AdChecker()
     result = checker.analyze(
