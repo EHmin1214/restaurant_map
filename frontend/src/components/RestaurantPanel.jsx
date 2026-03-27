@@ -1,5 +1,5 @@
 // src/components/RestaurantPanel.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { getAccountColor } from "../App";
 
@@ -8,14 +8,7 @@ export default function RestaurantPanel({ restaurant, accounts, onClose, onHide,
   const [adResult, setAdResult] = useState(null);
   const [adLoading, setAdLoading] = useState(false);
 
-  // 패널 열리면 자동으로 광고 분석 실행
-  useEffect(() => {
-    if (!r) return;
-    setAdResult(null);
-    checkAds();
-  }, [r?.id]);
-
-  const checkAds = async () => {
+  const checkAds = useCallback(async () => {
     setAdLoading(true);
     try {
       const res = await axios.post(`${apiBase}/ad-check/`, {
@@ -28,7 +21,14 @@ export default function RestaurantPanel({ restaurant, accounts, onClose, onHide,
     } finally {
       setAdLoading(false);
     }
-  };
+  }, [r, apiBase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 패널 열리면 자동으로 광고 분석 실행
+  useEffect(() => {
+    if (!r) return;
+    setAdResult(null);
+    checkAds();
+  }, [r?.id, checkAds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const verdictInfo = adResult ? {
     clean:     { label: "✅ 광고 적음", color: "#1D9E75", bg: "#E1F5EE" },

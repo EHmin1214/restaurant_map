@@ -10,7 +10,6 @@ export default function MapView({ restaurants, searchMarkers = [], accounts, onM
   const [mapReady, setMapReady] = useState(false);
   const hasFitBounds = useRef(false);
 
-
   // 지도 초기화 (최초 1회)
   useEffect(() => {
     const checkNaver = setInterval(() => {
@@ -32,6 +31,10 @@ export default function MapView({ restaurants, searchMarkers = [], accounts, onM
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
+
+    if (restaurants.length === 0) {
+      hasFitBounds.current = false;
+    }
 
     restaurants.forEach((r) => {
       const mentions = r.account_mentions || [];
@@ -59,21 +62,20 @@ export default function MapView({ restaurants, searchMarkers = [], accounts, onM
         },
       });
 
-     window.naver.maps.Event.addListener(marker, "click", () => {
-      // 패널 높이(약 50vh)의 절반만큼 위로 오프셋
-      const panelHeight = window.innerHeight * 0.25;
-      const projection = mapInstance.current.getProjection();
-      const point = projection.fromCoordToOffset(
-        new window.naver.maps.LatLng(r.lat, r.lng)
-      );
-      const adjustedPoint = new window.naver.maps.Point(
-        point.x,
-        point.y + panelHeight
-      );
-      const adjustedCoord = projection.fromOffsetToCoord(adjustedPoint);
-      mapInstance.current.panTo(adjustedCoord);
-      onMarkerClick(r.id, false);
-    });
+      window.naver.maps.Event.addListener(marker, "click", () => {
+        const panelHeight = window.innerHeight * 0.25;
+        const projection = mapInstance.current.getProjection();
+        const point = projection.fromCoordToOffset(
+          new window.naver.maps.LatLng(r.lat, r.lng)
+        );
+        const adjustedPoint = new window.naver.maps.Point(
+          point.x,
+          point.y + panelHeight
+        );
+        const adjustedCoord = projection.fromOffsetToCoord(adjustedPoint);
+        mapInstance.current.panTo(adjustedCoord);
+        onMarkerClick(r.id, false);
+      });
 
       markersRef.current.push(marker);
     });
@@ -81,12 +83,12 @@ export default function MapView({ restaurants, searchMarkers = [], accounts, onM
     if (restaurants.length > 0 && !hasFitBounds.current) {
       const bounds = new window.naver.maps.LatLngBounds();
       restaurants.forEach((r) =>
-       bounds.extend(new window.naver.maps.LatLng(r.lat, r.lng))
-       );
+        bounds.extend(new window.naver.maps.LatLng(r.lat, r.lng))
+      );
       mapInstance.current.fitBounds(bounds, { padding: 60 });
       hasFitBounds.current = true;
     }
-  }, [restaurants, accounts, mapReady]);
+  }, [restaurants, accounts, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 검색 결과 마커 업데이트
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function MapView({ restaurants, searchMarkers = [], accounts, onM
 
       searchMarkersRef.current.push(marker);
     });
-  }, [searchMarkers, mapReady]);
+  }, [searchMarkers, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ flex: 1, height: "100vh", position: "relative" }}>
