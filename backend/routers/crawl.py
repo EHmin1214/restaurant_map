@@ -17,7 +17,7 @@ from database import get_db
 from models import Account, Post, Restaurant, PostRestaurant
 from scrapers.naver_blog import NaverBlogScraper
 from extractor import RestaurantExtractor
-from place_resolver import PlaceResolver
+from routers.place_resolver import PlaceResolver
 from dotenv import load_dotenv
 load_dotenv()
 import logging
