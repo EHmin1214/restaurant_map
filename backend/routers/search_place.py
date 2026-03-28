@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from place_resolver import PlaceResolver
+from backend.routers.place_resolver import PlaceResolver
 from scrapers.base import PostData, SourceType
 from datetime import datetime
 

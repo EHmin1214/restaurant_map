@@ -111,3 +111,15 @@ class AdCheckCache(Base):
     __table_args__ = (
         UniqueConstraint("restaurant_name", name="uq_ad_cache_name"),
     )
+
+class PersonalPlace(Base):
+    __tablename__ = "personal_places"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    address: Mapped[str] = mapped_column(String(300), nullable=True)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lng: Mapped[float] = mapped_column(Float, nullable=False)
+    category: Mapped[str] = mapped_column(String(200), nullable=True)
+    naver_place_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

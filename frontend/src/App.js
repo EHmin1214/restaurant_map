@@ -24,15 +24,24 @@ export default function App() {
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [hiddenIds, setHiddenIds] = useState(new Set());
-  const [searchMarkers, setSearchMarkers] = useState([]);
 
-  // 사이드바 열림/닫힘 상태 — 모바일에선 기본 닫힘
+  // Personal 맛집 — DB에서 불러옴
+  const [personalPlaces, setPersonalPlaces] = useState([]);
+  const [showPersonal, setShowPersonal] = useState(true);
+
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
 
+  // 계정 목록 로드
   useEffect(() => {
     axios.get(`${API_BASE}/accounts/`).then((res) => setAccounts(res.data));
   }, []);
 
+  // Personal 맛집 로드
+  useEffect(() => {
+    axios.get(`${API_BASE}/personal-places/`).then((res) => setPersonalPlaces(res.data));
+  }, []);
+
+  // 선택된 계정 바뀔 때마다 맛집 로드
   useEffect(() => {
     const params = selectedAccountIds.map((id) => `account_ids=${id}`).join("&");
     const url = `${API_BASE}/restaurants/${params ? "?" + params : ""}`;
@@ -45,35 +54,58 @@ export default function App() {
     );
   };
 
-  const handleMarkerClick = useCallback(async (restaurantId, isSearchResult = false) => {
-    if (isSearchResult) {
-      const marker = searchMarkers.find((m) => m.id === restaurantId);
-      if (marker) setSelectedRestaurant({ ...marker, sources: [] });
+  const handleMarkerClick = useCallback(async (restaurantId, isPersonal = false) => {
+    if (isPersonal) {
+      const place = personalPlaces.find((p) => `personal_${p.id}` === restaurantId);
+      if (place) setSelectedRestaurant({ ...place, sources: [], isPersonal: true });
+      if (window.innerWidth <= 768) setSidebarOpen(false);
       return;
     }
     const res = await axios.get(`${API_BASE}/restaurants/${restaurantId}`);
     setSelectedRestaurant(res.data);
-    // 모바일에서 마커 클릭 시 사이드바 자동 닫기
     if (window.innerWidth <= 768) setSidebarOpen(false);
-  }, [searchMarkers]);
+  }, [personalPlaces]);
 
-  const hideRestaurant = useCallback((restaurantId, isSearchResult = false) => {
-    if (isSearchResult) {
-      setSearchMarkers((prev) => prev.filter((m) => m.id !== restaurantId));
+  const hideRestaurant = useCallback((restaurantId, isPersonal = false) => {
+    if (isPersonal) {
+      // Personal 맛집은 숨기기 대신 삭제
+      const place = personalPlaces.find((p) => `personal_${p.id}` === restaurantId || p.id === restaurantId);
+      if (place) {
+        axios.delete(`${API_BASE}/personal-places/${place.id}`).then(() => {
+          setPersonalPlaces((prev) => prev.filter((p) => p.id !== place.id));
+        });
+      }
     } else {
       setHiddenIds((prev) => new Set([...prev, restaurantId]));
     }
     setSelectedRestaurant(null);
+  }, [personalPlaces]);
+
+  // 검색 결과를 Personal 맛집으로 저장
+  const addPersonalPlace = useCallback(async (place) => {
+    try {
+      const res = await axios.post(`${API_BASE}/personal-places/`, {
+        name: place.name,
+        address: place.address,
+        lat: place.lat,
+        lng: place.lng,
+        category: place.category,
+        naver_place_url: place.naver_place_url,
+      });
+      setPersonalPlaces((prev) => {
+        const exists = prev.find((p) => p.id === res.data.id);
+        if (exists) return prev;
+        return [...prev, res.data];
+      });
+      if (window.innerWidth <= 768) setSidebarOpen(false);
+    } catch (e) {
+      console.error("Personal 맛집 저장 실패", e);
+    }
   }, []);
 
-  const addSearchMarker = useCallback((place) => {
-    setSearchMarkers((prev) => {
-      const exists = prev.find((m) => m.name === place.name && m.lat === place.lat);
-      if (exists) return prev;
-      return [...prev, { ...place, id: `search_${Date.now()}`, isSearchResult: true }];
-    });
-    // 모바일에서 검색 후 사이드바 자동 닫기
-    if (window.innerWidth <= 768) setSidebarOpen(false);
+  const deletePersonalPlace = useCallback(async (placeId) => {
+    await axios.delete(`${API_BASE}/personal-places/${placeId}`);
+    setPersonalPlaces((prev) => prev.filter((p) => p.id !== placeId));
   }, []);
 
   const visibleRestaurants = restaurants.filter((r) => !hiddenIds.has(r.id));
@@ -89,17 +121,14 @@ export default function App() {
           top: 16,
           left: sidebarOpen ? 290 : 16,
           zIndex: 30,
-          width: 36,
-          height: 36,
+          width: 36, height: 36,
           borderRadius: "50%",
           background: "white",
           border: "none",
           boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
           cursor: "pointer",
           fontSize: 16,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "flex", alignItems: "center", justifyContent: "center",
           transition: "left 0.3s ease",
         }}
       >
@@ -120,13 +149,17 @@ export default function App() {
           onToggleAccount={toggleAccount}
           onAccountAdded={(acc) => setAccounts((prev) => [...prev, acc])}
           apiBase={API_BASE}
-          onAddSearchMarker={addSearchMarker}
+          onAddPersonalPlace={addPersonalPlace}
+          personalPlaces={personalPlaces}
+          showPersonal={showPersonal}
+          setShowPersonal={setShowPersonal}
+          onDeletePersonalPlace={deletePersonalPlace}
         />
       </div>
 
       <MapView
         restaurants={visibleRestaurants}
-        searchMarkers={searchMarkers}
+        personalPlaces={showPersonal ? personalPlaces : []}
         accounts={accounts}
         onMarkerClick={handleMarkerClick}
       />

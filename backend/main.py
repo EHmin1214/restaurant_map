@@ -24,6 +24,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
 from routers import accounts, crawl, restaurants, ad_check, search_place
+from routers import accounts, crawl, restaurants, ad_check, search_place, personal_places
+
 
 # 테이블 자동 생성 (개발 편의용, 프로덕션에선 Alembic 마이그레이션 사용)
 Base.metadata.create_all(bind=engine)
@@ -48,7 +50,10 @@ app.include_router(crawl.router)
 app.include_router(restaurants.router)
 app.include_router(ad_check.router)
 app.include_router(search_place.router)
+app.include_router(personal_places.router)
+
 
 @app.get("/")
 def root():
     return {"status": "ok", "message": "맛집 지도 API"}
+

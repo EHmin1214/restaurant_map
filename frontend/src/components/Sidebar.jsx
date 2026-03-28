@@ -4,20 +4,15 @@ import axios from "axios";
 import { getAccountColor } from "../App";
 
 export default function Sidebar({
-  accounts,
-  setAccounts,
-  selectedAccountIds,
-  onToggleAccount,
-  onAccountAdded,
-  apiBase,
-  onAddSearchMarker,
+  accounts, setAccounts,
+  selectedAccountIds, onToggleAccount, onAccountAdded,
+  apiBase, onAddPersonalPlace,
+  personalPlaces, showPersonal, setShowPersonal, onDeletePersonalPlace,
 }) {
   const [newId, setNewId] = useState("");
   const [newName, setNewName] = useState("");
   const [crawling, setCrawling] = useState(null);
   const [message, setMessage] = useState("");
-
-  // 가게 검색
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
 
@@ -29,8 +24,9 @@ export default function Sidebar({
         params: { name: searchQuery.trim() },
       });
       if (res.data) {
-        onAddSearchMarker(res.data);
-        setMessage(`'${res.data.name}' 지도에 추가됨`);
+        await onAddPersonalPlace(res.data);
+        setMessage(`'${res.data.name}' 저장됨!`);
+        setSearchQuery("");
       } else {
         setMessage("가게를 찾을 수 없어요");
       }
@@ -51,8 +47,7 @@ export default function Sidebar({
         author_name: newName.trim() || newId.trim(),
       });
       onAccountAdded(res.data);
-      setNewId("");
-      setNewName("");
+      setNewId(""); setNewName("");
       setMessage("계정 추가 완료!");
       setTimeout(() => setMessage(""), 2000);
     } catch (e) {
@@ -88,14 +83,10 @@ export default function Sidebar({
 
   return (
     <div style={{
-      width: 280,
-      height: "100vh",
-      background: "white",
+      width: 280, height: "100vh", background: "white",
       boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
-      display: "flex",
-      flexDirection: "column",
-      zIndex: 10,
-      position: "relative",
+      display: "flex", flexDirection: "column",
+      zIndex: 10, position: "relative", overflowY: "auto",
     }}>
       {/* 헤더 */}
       <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid #f0f0f0" }}>
@@ -104,7 +95,7 @@ export default function Sidebar({
         </h1>
       </div>
 
-      {/* 가게 검색창 */}
+      {/* 가게 검색 */}
       <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
         <p style={{ fontSize: 12, color: "#888", margin: "0 0 8px" }}>가게 검색</p>
         <div style={{ display: "flex", gap: 6 }}>
@@ -132,9 +123,81 @@ export default function Sidebar({
           </button>
         </div>
         {message && (
-          <p style={{ fontSize: 12, color: "#E8593C", margin: "6px 0 0" }}>
-            {message}
-          </p>
+          <p style={{ fontSize: 12, color: "#E8593C", margin: "6px 0 0" }}>{message}</p>
+        )}
+      </div>
+
+      {/* Personal 맛집 섹션 */}
+      <div style={{ borderBottom: "1px solid #f0f0f0" }}>
+        <div
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 16px", cursor: "pointer",
+          }}
+          onClick={() => setShowPersonal(!showPersonal)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: "#555", flexShrink: 0,
+            }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
+              Personal
+            </span>
+            <span style={{ fontSize: 11, color: "#888" }}>({personalPlaces.length})</span>
+          </div>
+          <span style={{ fontSize: 11, color: "#aaa" }}>{showPersonal ? "▲" : "▼"}</span>
+        </div>
+
+        {showPersonal && (
+          <div style={{ paddingBottom: 8 }}>
+            {personalPlaces.length === 0 && (
+              <p style={{ fontSize: 12, color: "#bbb", padding: "0 16px 8px" }}>
+                가게를 검색해서 추가해보세요
+              </p>
+            )}
+            {personalPlaces.map((place) => (
+              <div
+                key={place.id}
+                style={{
+                  display: "flex", alignItems: "center",
+                  padding: "6px 16px", gap: 8,
+                }}
+              >
+                <div style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: "#555", flexShrink: 0,
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1a1a",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {place.name}
+                  </p>
+                  {place.address && (
+                    <p style={{
+                      margin: 0, fontSize: 10, color: "#888",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {place.address}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => onDeletePersonalPlace(place.id)}
+                  style={{
+                    fontSize: 11, padding: "3px 8px",
+                    border: "1px solid #ddd", borderRadius: 6,
+                    background: "white", color: "#888",
+                    cursor: "pointer", flexShrink: 0,
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -155,13 +218,11 @@ export default function Sidebar({
           placeholder="닉네임 (선택)"
           style={{ ...inputStyle, marginTop: 6 }}
         />
-        <button onClick={addAccount} style={buttonStyle}>
-          추가
-        </button>
+        <button onClick={addAccount} style={buttonStyle}>추가</button>
       </div>
 
-      {/* 계정 목록 */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+      {/* 등록된 블로거 목록 */}
+      <div style={{ flex: 1, padding: "8px 0" }}>
         <p style={{ fontSize: 12, color: "#888", padding: "4px 16px 8px" }}>
           등록된 블로거 ({accounts.length})
         </p>
@@ -185,7 +246,6 @@ export default function Sidebar({
               }}
               onClick={() => onToggleAccount(acc.id)}
             >
-              {/* 컬러 체크박스 */}
               <div style={{
                 width: 16, height: 16, borderRadius: 4,
                 border: `1.5px solid ${isSelected ? color : "#ddd"}`,
@@ -195,14 +255,10 @@ export default function Sidebar({
               }}>
                 {isSelected && <span style={{ color: "white", fontSize: 10 }}>✓</span>}
               </div>
-
-              {/* 색상 도트 */}
               <div style={{
                 width: 8, height: 8, borderRadius: "50%",
                 background: color, flexShrink: 0,
               }} />
-
-              {/* 계정 정보 */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
                   margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1a1a",
@@ -214,8 +270,6 @@ export default function Sidebar({
                   @{acc.author_id} · 맛집 {acc.post_count}개
                 </p>
               </div>
-
-              {/* 수집 버튼 */}
               <button
                 onClick={(e) => { e.stopPropagation(); crawlAccount(acc.id); }}
                 disabled={crawling === acc.id}
@@ -229,8 +283,6 @@ export default function Sidebar({
               >
                 {crawling === acc.id ? "⏳" : "수집"}
               </button>
-
-              {/* 삭제 버튼 */}
               <button
                 onClick={(e) => { e.stopPropagation(); deleteAccount(acc.id, acc.author_name); }}
                 style={{
@@ -251,24 +303,14 @@ export default function Sidebar({
 }
 
 const inputStyle = {
-  width: "100%",
-  padding: "7px 10px",
-  border: "1px solid #e0e0e0",
-  borderRadius: 8,
-  fontSize: 13,
-  boxSizing: "border-box",
-  outline: "none",
+  width: "100%", padding: "7px 10px",
+  border: "1px solid #e0e0e0", borderRadius: 8,
+  fontSize: 13, boxSizing: "border-box", outline: "none",
 };
 
 const buttonStyle = {
-  width: "100%",
-  marginTop: 8,
-  padding: "8px",
-  background: "#E8593C",
-  color: "white",
-  border: "none",
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
+  width: "100%", marginTop: 8, padding: "8px",
+  background: "#E8593C", color: "white",
+  border: "none", borderRadius: 8,
+  fontSize: 13, fontWeight: 600, cursor: "pointer",
 };
